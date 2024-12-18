@@ -1,7 +1,11 @@
-import Image from "next/image";
+import Hero from "@/components/Hero";
+import LandingPageSections from "@/components/LandingPageSections";
 
 export default function Home() {
   return (
-    <h1>Hello World!</h1>
+    <div className="mt-40">
+      <Hero />
+      <LandingPageSections />
+    </div>
   );
 }
