@@ -128,11 +128,12 @@ export async function bulkDeleteTransactions(transactionIds: string[]) {
       for (const [accountId, balanceChange] of Object.entries(
         accountBalanceChanges
       )) {
+        const incrementValue = typeof balanceChange === 'number' ? balanceChange : parseFloat(balanceChange as string);
         await tx.account.update({
           where: { id: accountId },
           data: {
             balance: {
-              increment: balanceChange as number,
+              increment: incrementValue,
             },
           },
         });
@@ -140,7 +141,7 @@ export async function bulkDeleteTransactions(transactionIds: string[]) {
     });
 
     revalidatePath("/dashboard");
-    revalidatePath("/account/[id]");
+    revalidatePath(`/account/[id]`, "page");
 
     return { success: true };
   } catch (error: any) {

@@ -54,6 +54,7 @@ import { bulkDeleteTransactions } from "@/actions/account";
 import useFetch from "@/hooks/use-fetch";
 import { BarLoader } from "react-spinners";
 import { useRouter } from "next/navigation";
+import { Transaction } from "@prisma/client";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -64,8 +65,12 @@ const RECURRING_INTERVALS = {
   YEARLY: "Yearly",
 };
 
-export function TransactionTable({ transactions }) {
-  const [selectedIds, setSelectedIds] = useState([]);
+export function TransactionTable({
+  transactions,
+}: {
+  transactions: Transaction[];
+}) {
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState({
     field: "date",
     direction: "desc",
@@ -107,10 +112,10 @@ export function TransactionTable({ transactions }) {
 
       switch (sortConfig.field) {
         case "date":
-          comparison = new Date(a.date) - new Date(b.date);
+          comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
           break;
         case "amount":
-          comparison = a.amount - b.amount;
+          comparison = Number(a.amount) - Number(b.amount);
           break;
         case "category":
           comparison = a.category.localeCompare(b.category);
@@ -137,7 +142,7 @@ export function TransactionTable({ transactions }) {
     );
   }, [filteredAndSortedTransactions, currentPage]);
 
-  const handleSort = (field) => {
+  const handleSort = (field: string) => {
     setSortConfig((current) => ({
       field,
       direction:
@@ -145,8 +150,8 @@ export function TransactionTable({ transactions }) {
     }));
   };
 
-  const handleSelect = (id) => {
-    setSelectedIds((current) =>
+  const handleSelect = (id: string) => {
+    setSelectedIds((current: string[]) =>
       current.includes(id)
         ? current.filter((item) => item !== id)
         : [...current, id]
@@ -181,6 +186,7 @@ export function TransactionTable({ transactions }) {
   useEffect(() => {
     if (deleted && !deleteLoading) {
       toast.error("Transactions deleted successfully");
+      setSelectedIds([]);
     }
   }, [deleted, deleteLoading]);
 
@@ -191,7 +197,7 @@ export function TransactionTable({ transactions }) {
     setCurrentPage(1);
   };
 
-  const handlePageChange = (newPage) => {
+  const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
     setSelectedIds([]); // Clear selections on page change
   };
@@ -347,7 +353,7 @@ export function TransactionTable({ transactions }) {
                 </TableCell>
               </TableRow>
             ) : (
-              paginatedTransactions.map((transaction) => (
+              paginatedTransactions.map((transaction: Transaction) => (
                 <TableRow key={transaction.id}>
                   <TableCell>
                     <Checkbox
@@ -390,21 +396,23 @@ export function TransactionTable({ transactions }) {
                               className="gap-1 bg-purple-100 text-purple-700 hover:bg-purple-200"
                             >
                               <RefreshCw className="h-3 w-3" />
-                              {
-                                RECURRING_INTERVALS[
-                                  transaction.recurringInterval
-                                ]
-                              }
+                              {transaction.recurringInterval
+                                ? RECURRING_INTERVALS[
+                                    transaction.recurringInterval
+                                  ]
+                                : ""}
                             </Badge>
                           </TooltipTrigger>
                           <TooltipContent>
                             <div className="text-sm">
                               <div className="font-medium">Next Date:</div>
                               <div>
-                                {format(
-                                  new Date(transaction.nextRecurringDate),
-                                  "PPP"
-                                )}
+                                {transaction.nextRecurringDate
+                                  ? format(
+                                      new Date(transaction.nextRecurringDate),
+                                      "PPP"
+                                    )
+                                  : ""}
                               </div>
                             </div>
                           </TooltipContent>
