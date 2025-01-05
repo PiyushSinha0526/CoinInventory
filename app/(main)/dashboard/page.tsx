@@ -1,15 +1,28 @@
-import { Suspense } from "react";
 import { getUserAccounts } from "@/actions/dashboard";
 import { AccountCard } from "./_components/accountCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 import CreateAccount from "@/components/CreateAccount";
+import { getCurrentBudget } from "@/actions/budget";
+import { BudgetProgress } from "./_components/budgetProgress";
 
 export default async function DashboardPage() {
   const accounts = await getUserAccounts();
+  
+  const defaultAccount = accounts?.find((account) => account.isDefault);
+
+  // Get budget for default account
+  let budgetData = null;
+  if (defaultAccount) {
+    budgetData = await getCurrentBudget(defaultAccount.id);
+  }
 
   return (
     <div className="space-y-8">
+      <BudgetProgress
+        initialBudget={budgetData?.budget}
+        currentExpenses={budgetData?.currentExpenses || 0}
+      />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <CreateAccount>
           <Card className="hover:shadow-md transition-shadow cursor-pointer border-dashed">
