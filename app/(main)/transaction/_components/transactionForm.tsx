@@ -26,6 +26,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { ReceiptScanner } from "./reciptScanner";
 
 const AddTransactionForm = ({ accounts, categories }: any) => {
   const router = useRouter();
@@ -66,9 +67,7 @@ const AddTransactionForm = ({ accounts, categories }: any) => {
 
   useEffect(() => {
     if (transactionResult?.success && !transactionLoading) {
-      toast.success(
-         "Transaction created successfully"
-      );
+      toast.success("Transaction created successfully");
       reset();
       router.push(`/account/${transactionResult.data.accountId}`);
     }
@@ -78,11 +77,26 @@ const AddTransactionForm = ({ accounts, categories }: any) => {
   const isRecurring = watch("isRecurring");
   const date = watch("date");
 
+  const handleScanComplete = (scannedData: any) => {
+    if (scannedData) {
+      setValue("amount", scannedData.amount.toString());
+      setValue("date", new Date(scannedData.date));
+      if (scannedData.description) {
+        setValue("description", scannedData.description);
+      }
+      if (scannedData.category) {
+        setValue("category", scannedData.category);
+      }
+      toast.success("Receipt scanned successfully");
+    }
+  };
+
   const filteredCategories = categories.filter(
     (category: Category) => category.type === type
   );
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {<ReceiptScanner onScanComplete={handleScanComplete} />}
       <div className="space-y-2">
         <label className="text-sm font-medium">Type</label>
         <Select
@@ -140,7 +154,9 @@ const AddTransactionForm = ({ accounts, categories }: any) => {
             </SelectContent>
           </Select>
           {errors.accountId && (
-            <p className="text-sm text-red-500">{String(errors.accountId.message)}</p>
+            <p className="text-sm text-red-500">
+              {String(errors.accountId.message)}
+            </p>
           )}
         </div>
       </div>

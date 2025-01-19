@@ -5,6 +5,9 @@ import { db } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { request } from "@arcjet/next";
 import aj from "@/lib/arcjet";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 const serializeAmount = (obj: any) => ({
   ...obj,
@@ -96,7 +99,6 @@ export async function createTransaction(data: any) {
   }
 }
 
-
 export async function getTransaction(id: string) {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
@@ -117,6 +119,70 @@ export async function getTransaction(id: string) {
   if (!transaction) throw new Error("Transaction not found");
 
   return serializeAmount(transaction);
+}
+
+export async function scanReceipt(file: any) {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    // Convert File to ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer();
+    // Convert ArrayBuffer to Base64
+    const base64String = Buffer.from(arrayBuffer).toString("base64");
+
+    const prompt = `
+  Extract key details from this receipt image and return them in JSON format with the following fields:
+  - "amount": The total amount (numeric value only).
+  - "date": The transaction date in ISO format (YYYY-MM-DD).
+  - "description": A brief summary of purchased items.
+  - "merchantName": The store or merchant's name.
+  - "category": A suggested category from this list: 
+    ["housing", "transportation", "groceries", "utilities", "entertainment", "food", "shopping", "healthcare", 
+    "education", "personal", "travel", "insurance", "gifts", "bills", "other-expense"].
+
+  Respond strictly with a valid JSON object in the following format:
+  {
+    "amount": number,
+    "date": "ISO date string",
+    "description": "string",
+    "merchantName": "string",
+    "category": "string"
+  }
+
+  If the image does not contain a receipt, return an empty object: {}
+`;
+
+    const result = await model.generateContent([
+      {
+        inlineData: {
+          data: base64String,
+          mimeType: file.type,
+        },
+      },
+      prompt,
+    ]);
+
+    const response = await result.response;
+    const text = response.text();
+    const cleanedText = text.replace(/```(?:json)?\n?/g, "").trim();
+
+    try {
+      const data = JSON.parse(cleanedText);
+      return {
+        amount: parseFloat(data.amount),
+        date: new Date(data.date),
+        description: data.description,
+        category: data.category,
+        merchantName: data.merchantName,
+      };
+    } catch (parseError) {
+      console.error("Error parsing JSON response:", parseError);
+      throw new Error("Invalid response format from Gemini");
+    }
+  } catch (error) {
+    console.error("Error scanning receipt:", error);
+    throw new Error("Failed to scan receipt");
+  }
 }
 
 function calculateNextRecurringDate(startDate: Date, interval: string) {
