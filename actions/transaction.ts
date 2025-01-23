@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { request } from "@arcjet/next";
 import aj from "@/lib/arcjet";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Transaction } from "@prisma/client";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
@@ -99,6 +100,7 @@ export async function createTransaction(data: any) {
   }
 }
 
+// Get Transaction
 export async function getTransaction(id: string) {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
@@ -121,6 +123,81 @@ export async function getTransaction(id: string) {
   return serializeAmount(transaction);
 }
 
+// Update/ Edit Transaction
+export async function updateTransaction(id: string, data: Transaction) {
+  try {
+    const { userId } = await auth();
+    if (!userId) throw new Error("Unauthorized");
+
+    const user = await db.user.findUnique({
+      where: { clerkUserId: userId },
+    });
+
+    if (!user) throw new Error("User not found");
+
+    // Get original transaction to calculate balance change
+    const originalTransaction = await db.transaction.findUnique({
+      where: {
+        id,
+        userId: user.id,
+      },
+      include: {
+        account: true,
+      },
+    });
+
+    if (!originalTransaction) throw new Error("Transaction not found");
+
+    // Calculate balance changes
+    const oldBalanceChange =
+      originalTransaction.type === "EXPENSE"
+        ? -originalTransaction.amount.toNumber()
+        : originalTransaction.amount.toNumber();
+
+    const newBalanceChange =
+      data.type === "EXPENSE" ? -data.amount : data.amount;
+
+    const netBalanceChange = Number(newBalanceChange) - Number(oldBalanceChange);
+
+    // Update transaction and account balance in a transaction
+    const transaction = await db.$transaction(async (tx) => {
+      const updated = await tx.transaction.update({
+        where: {
+          id,
+          userId: user.id,
+        },
+        data: {
+          ...data,
+          nextRecurringDate:
+            data.isRecurring && data.recurringInterval
+              ? calculateNextRecurringDate(data.date, data.recurringInterval)
+              : null,
+        },
+      });
+
+      // Update account balance
+      await tx.account.update({
+        where: { id: data.accountId },
+        data: {
+          balance: {
+            increment: netBalanceChange,
+          },
+        },
+      });
+
+      return updated;
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath(`/account/${data.accountId}`);
+
+    return { success: true, data: serializeAmount(transaction) };
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+}
+
+// Scan Receipt from Image
 export async function scanReceipt(file: any) {
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -185,6 +262,7 @@ export async function scanReceipt(file: any) {
   }
 }
 
+// Calculate next recurring date
 function calculateNextRecurringDate(startDate: Date, interval: string) {
   const date = new Date(startDate);
 
