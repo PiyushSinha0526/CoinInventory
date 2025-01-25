@@ -1,14 +1,17 @@
-import { getUserAccounts } from "@/actions/dashboard";
+import { getDashboardData, getUserAccounts } from "@/actions/dashboard";
 import { AccountCard } from "./_components/accountCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 import CreateAccount from "@/components/CreateAccount";
 import { getCurrentBudget } from "@/actions/budget";
 import { BudgetProgress } from "./_components/budgetProgress";
+import { DashboardOverview } from "./_components/transactionOverview";
 
 export default async function DashboardPage() {
-  const accounts = await getUserAccounts();
-  
+  const [accounts, transactions] = await Promise.all([
+    getUserAccounts(),
+    getDashboardData(),
+  ]);
   const defaultAccount = accounts?.find((account) => account.isDefault);
 
   // Get budget for default account
@@ -22,6 +25,10 @@ export default async function DashboardPage() {
       <BudgetProgress
         initialBudget={budgetData?.budget}
         currentExpenses={budgetData?.currentExpenses || 0}
+      />
+      <DashboardOverview
+        accounts={accounts}
+        transactions={transactions || []}
       />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <CreateAccount>
