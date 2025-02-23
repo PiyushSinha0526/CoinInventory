@@ -4,7 +4,19 @@ import { inngest } from "./client";
 import EmailTemplate from "@/emails/template";
 import React from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Transaction } from "@prisma/client";
 
+type TransactionStats = {
+  totalExpenses: number;
+  totalIncome: number;
+  byCategory: Record<string, number>;
+  transactionCount: number;
+};
+interface FinancialStats {
+  totalIncome: number;
+  totalExpenses: number;
+  byCategory: Record<string, number>;
+}
 export const checkBudgetAlerts = inngest.createFunction(
   { id: "check-budget-alerts", name: "Check Budget Alerts" },
   { cron: "0 */6 * * *" }, // Every 6 hours
@@ -150,7 +162,7 @@ export const processRecurringTransaction = inngest.createFunction(
             lastProcessed: new Date(),
             nextRecurringDate: calculateNextRecurringDate(
               new Date(),
-              transaction.recurringInterval
+              transaction.recurringInterval ?? "DAILY"
             ),
           },
         });
@@ -158,7 +170,6 @@ export const processRecurringTransaction = inngest.createFunction(
     });
   }
 );
-
 
 // Trigger recurring transactions with batching
 export const triggerRecurringTransactions = inngest.createFunction(
@@ -214,12 +225,12 @@ function isNewMonth(lastAlertDate: Date, currentDate: Date) {
 }
 
 // Utility functions
-function isTransactionDue(transaction: any) {
+function isTransactionDue(transaction: Transaction) {
   // If no lastProcessed date, transaction is due
   if (!transaction.lastProcessed) return true;
 
   const today = new Date();
-  const nextDue = new Date(transaction.nextRecurringDate);
+  const nextDue = new Date(transaction.nextRecurringDate||'');
 
   // Compare with nextDue date
   return nextDue <= today;
@@ -244,8 +255,8 @@ function calculateNextRecurringDate(date: Date, interval: string) {
   return next;
 }
 
-async function generateFinancialInsights(stats: any, month: string) {
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY||'');
+async function generateFinancialInsights(stats: FinancialStats, month: string) {
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const prompt = `
@@ -312,7 +323,7 @@ export const generateMonthlyReports = inngest.createFunction(
           to: user.email,
           subject: `Your Monthly Financial Report - ${monthName}`,
           react: EmailTemplate({
-            userName: user.name||'',
+            userName: user.name || "",
             type: "monthly-report",
             data: {
               stats,
@@ -342,7 +353,7 @@ async function getMonthlyStats(userId: string, month: Date) {
     },
   });
 
-  return transactions.reduce(
+  return transactions.reduce<TransactionStats>(
     (stats, t) => {
       const amount = t.amount.toNumber();
       if (t.type === "EXPENSE") {

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, ArrowDownRight, CreditCard } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useEffect } from "react";
 import useFetch from "@/hooks/use-fetch";
@@ -32,7 +32,7 @@ export function AccountCard({ account }: { account: Account }) {
     error,
   } = useFetch(updateDefaultAccount);
 
-  const handleDefaultChange = async (event: any) => {
+  const handleDefaultChange = async (event: React.FormEvent<HTMLButtonElement>) => {
     event.preventDefault();
 
     if (isDefault) {

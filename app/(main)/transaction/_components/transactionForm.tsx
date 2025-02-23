@@ -27,13 +27,27 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { ReceiptScanner } from "./reciptScanner";
+import { Account, RecurringInterval, Transaction } from "@prisma/client";
+
+interface TransactionFormProps {
+  accounts: Account[] | [];
+  categories: Category[];
+  editMode?: boolean;
+  initialData: Transaction | null;
+}
+type ScannedData = {
+  amount: number;
+  date: string;
+  description?: string;
+  category?: string;
+};
 
 const AddTransactionForm = ({
   accounts,
   categories,
   editMode = false,
   initialData = null,
-}: any) => {
+}: TransactionFormProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("edit");
@@ -67,9 +81,10 @@ const AddTransactionForm = ({
             amount: "",
             description: "",
             category: "",
-            accountId: accounts.find((ac: any) => ac.isDefault)?.id,
+            accountId: accounts.find((ac: Account) => ac.isDefault)?.id,
             date: new Date(),
             isRecurring: false,
+            recurringInterval: undefined,
           },
   });
   const {
@@ -102,13 +117,13 @@ const AddTransactionForm = ({
       reset();
       router.push(`/account/${transactionResult.data.accountId}`);
     }
-  }, [transactionResult, transactionLoading, editMode]);
+  }, [transactionResult, transactionLoading, editMode, reset, router]);
 
   const type = watch("type");
   const isRecurring = watch("isRecurring");
   const date = watch("date");
 
-  const handleScanComplete = (scannedData: any) => {
+  const handleScanComplete = (scannedData: ScannedData) => {
     if (scannedData) {
       setValue("amount", scannedData.amount.toString());
       setValue("date", new Date(scannedData.date));
@@ -142,7 +157,7 @@ const AddTransactionForm = ({
             <SelectItem value="INCOME">Income</SelectItem>
           </SelectContent>
         </Select>
-        {errors.type && (
+        {errors && errors.type && (
           <p className="text-sm text-red-500">{String(errors.type.message)}</p>
         )}
       </div>
@@ -164,16 +179,17 @@ const AddTransactionForm = ({
         <div className="space-y-2">
           <label className="text-sm font-medium">Account</label>
           <Select
-            onValueChange={(value) => setValue("accountId", value)}
+            onValueChange={(value: string) => setValue("accountId", value)}
             defaultValue={getValues("accountId")}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select account" />
             </SelectTrigger>
             <SelectContent>
-              {accounts.map((account: any) => (
+              {accounts.map((account: Account) => (
                 <SelectItem key={account.id} value={account.id}>
-                  {account.name} (${parseFloat(account.balance).toFixed(2)})
+                  {account.name} ($
+                  {parseFloat(account.balance.toString()).toFixed(2)})
                 </SelectItem>
               ))}
               <CreateAccount>
@@ -278,7 +294,9 @@ const AddTransactionForm = ({
         <div className="space-y-2">
           <label className="text-sm font-medium">Recurring Interval</label>
           <Select
-            onValueChange={(value) => setValue("recurringInterval", value)}
+            onValueChange={(value: RecurringInterval) =>
+              setValue("recurringInterval", value)
+            }
             defaultValue={getValues("recurringInterval")}
           >
             <SelectTrigger>
@@ -291,7 +309,7 @@ const AddTransactionForm = ({
               <SelectItem value="YEARLY">Yearly</SelectItem>
             </SelectContent>
           </Select>
-          {errors.recurringInterval && (
+          {errors && errors.recurringInterval && (
             <p className="text-sm text-red-500">
               {String(errors.recurringInterval.message)}
             </p>

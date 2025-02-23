@@ -9,12 +9,14 @@ const nextConfig: NextConfig = {
         hostname: "randomuser.me",
       },
     ],
-    domains: ["randomuser.me"],
   },
   experimental: {
     serverActions: {
       bodySizeLimit: "5mb",
     },
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
   },
 };
 

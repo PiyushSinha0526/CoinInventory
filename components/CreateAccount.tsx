@@ -27,6 +27,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { createAccount } from "@/actions/dashboard";
 import { accountSchema, AccountSchema } from "@/app/lib/schema";
+import { Account } from "@prisma/client";
 
 interface CreateAccountProps {
   children: ReactNode;
@@ -59,7 +60,7 @@ export default function CreateAccount({ children }: CreateAccountProps) {
     fn: createAccountFn,
     error,
     data: newAccount,
-  } = useFetch<any, any>(createAccount);
+  } = useFetch<{ success: boolean; data: Account }, [AccountFormValues]>(createAccount);
 
   const onSubmit: SubmitHandler<AccountFormValues> = async (data) => {
     await createAccountFn(data);

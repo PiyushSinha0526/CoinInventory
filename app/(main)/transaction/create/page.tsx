@@ -19,7 +19,7 @@ export default async function AddTransactionPage({ searchParams }:any) {
         <h1 className="text-5xl gradient-title ">{!!editId?'Edit':'Add'} Transaction</h1>
       </div>
       <AddTransactionForm
-        accounts={accounts}
+        accounts={accounts||[]}
         categories={defaultCategories}
         editMode={!!editId}
         initialData={initialData}

@@ -23,11 +23,15 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       <BudgetProgress
-        initialBudget={budgetData?.budget}
+        initialBudget={
+          budgetData?.budget
+            ? { amount: budgetData.budget.amount }
+            : { amount: 0 }
+        }
         currentExpenses={budgetData?.currentExpenses || 0}
       />
       <DashboardOverview
-        accounts={accounts}
+        accounts={accounts||[]}
         transactions={transactions || []}
       />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

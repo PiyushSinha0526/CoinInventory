@@ -37,7 +37,7 @@ export function DashboardOverview({
   accounts,
   transactions,
 }: {
-  accounts: any;
+  accounts: Account[];
   transactions: Transaction[];
 }) {
   const [selectedAccountId, setSelectedAccountId] = useState(

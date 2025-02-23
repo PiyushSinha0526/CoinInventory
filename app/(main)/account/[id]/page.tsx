@@ -3,14 +3,20 @@ import { getAccountWithTransactions } from "@/actions/account";
 import { BarLoader } from "react-spinners";
 import { TransactionTable } from "../_components/transactionTable";
 import { notFound } from "next/navigation";
-import {AccountChart} from "../_components/accountChart";
-
+import { AccountChart } from "../_components/accountChart";
+interface PageProps {
+  params: Promise<{
+      [key: string]: string | string[] | undefined;
+  }>;
+ }
 export default async function AccountPage({
   params,
-}: {
-  params: { id: string };
-}) {
-  const accountData = await getAccountWithTransactions(params.id);
+}: PageProps) {
+  const resolvedParams = await params;
+  if (!resolvedParams?.id || typeof resolvedParams.id !== "string") {
+    notFound();
+  }
+  const accountData = await getAccountWithTransactions(resolvedParams.id);
 
   if (!accountData) {
     notFound();

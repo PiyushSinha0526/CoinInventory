@@ -26,8 +26,8 @@ export const userAuth = async (): Promise<User | null> => {
     });
 
     return newUser;
-  } catch (error: any) {
-    console.error("Error in checkUser:", error.message);
+  } catch (error) {
+    console.error("Error in checkUser:", error instanceof Error ? error.message : error);
     throw new Error("Failed to check or create user");
   }
 };

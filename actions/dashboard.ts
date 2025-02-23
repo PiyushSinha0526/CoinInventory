@@ -1,5 +1,6 @@
 "use server";
 
+import { AccountSchema } from "@/app/lib/schema";
 import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { Account } from "@prisma/client";
@@ -49,7 +50,7 @@ export async function getUserAccounts() {
   }
 }
 
-export async function createAccount(data: Account) {
+export async function createAccount(data: AccountSchema) {
   try {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
